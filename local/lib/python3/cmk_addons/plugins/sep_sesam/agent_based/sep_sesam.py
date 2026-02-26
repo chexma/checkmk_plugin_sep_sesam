@@ -379,3 +379,60 @@ check_plugin_sep_sesam_license = CheckPlugin(
     },
     check_ruleset_name="sep_sesam_license",
 )
+
+
+# ---------------------------------------------------------------------------
+# Server Info
+# ---------------------------------------------------------------------------
+
+def parse_sep_sesam_server_info(string_table):
+    return _parse_json_section(string_table)
+
+
+def discover_sep_sesam_server_info(section):
+    if section is not None:
+        yield Service()
+
+
+def check_sep_sesam_server_info(section):
+    if section is None:
+        yield Result(state=State.UNKNOWN, summary="No data received from agent")
+        return
+
+    error = section.get("error")
+    if error:
+        yield Result(state=State.UNKNOWN, summary=f"Error fetching server info: {error}")
+        return
+
+    release = section.get("release") or "unknown"
+    os_name = section.get("os") or "unknown"
+    db_type = section.get("dbType") or "unknown"
+    java = section.get("javaVersion")
+    timezone = section.get("timezone")
+    kernel = section.get("kernel")
+
+    summary = f"Version: {release}, OS: {os_name}, DB: {db_type}"
+    yield Result(state=State.OK, summary=summary)
+
+    details_parts = []
+    if kernel:
+        details_parts.append(f"Kernel: {kernel}")
+    if java:
+        details_parts.append(f"Java: {java}")
+    if timezone:
+        details_parts.append(f"Timezone: {timezone}")
+    if details_parts:
+        yield Result(state=State.OK, details=" | ".join(details_parts))
+
+
+agent_section_sep_sesam_server_info = AgentSection(
+    name="sep_sesam_server_info",
+    parse_function=parse_sep_sesam_server_info,
+)
+
+check_plugin_sep_sesam_server_info = CheckPlugin(
+    name="sep_sesam_server_info",
+    service_name="SEP Sesam Server",
+    discovery_function=discover_sep_sesam_server_info,
+    check_function=check_sep_sesam_server_info,
+)

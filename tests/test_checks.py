@@ -166,3 +166,59 @@ class TestLicenseCheckEnhanced:
         results = list(check_sep_sesam_license(self.BASE_PARAMS, section))
         metric_names = [r[0] for r in results if isinstance(r, tuple)]
         assert "sep_sesam_volume_used_pct" in metric_names
+
+
+from cmk_addons.plugins.sep_sesam.agent_based.sep_sesam import (
+    discover_sep_sesam_server_info,
+    check_sep_sesam_server_info,
+)
+
+
+class TestServerInfoCheck:
+    SAMPLE = {
+        "name": "sesam-server",
+        "release": "5.2.0.3",
+        "kernel": "5.2.0",
+        "os": "Linux",
+        "dbType": "postgres",
+        "javaVersion": "11.0.12",
+        "timezone": "Europe/Berlin",
+        "error": None,
+    }
+
+    def test_discovers_one_service(self):
+        services = list(discover_sep_sesam_server_info(self.SAMPLE))
+        assert len(services) == 1
+
+    def test_no_discovery_when_none(self):
+        assert list(discover_sep_sesam_server_info(None)) == []
+
+    def test_always_ok(self):
+        results = list(check_sep_sesam_server_info(self.SAMPLE))
+        assert any(r.get("state") == 0 for r in results)
+
+    def test_version_in_summary(self):
+        results = list(check_sep_sesam_server_info(self.SAMPLE))
+        all_text = " ".join(str(r.get("summary", "")) for r in results)
+        assert "5.2.0.3" in all_text
+
+    def test_os_in_summary(self):
+        results = list(check_sep_sesam_server_info(self.SAMPLE))
+        all_text = " ".join(str(r.get("summary", "")) for r in results)
+        assert "Linux" in all_text
+
+    def test_db_type_in_output(self):
+        results = list(check_sep_sesam_server_info(self.SAMPLE))
+        all_text = " ".join(str(r.get("summary", "")) + str(r.get("details", "")) for r in results)
+        assert "postgres" in all_text
+
+    def test_error_is_unknown(self):
+        section = {**self.SAMPLE, "error": "HTTP 401"}
+        results = list(check_sep_sesam_server_info(section))
+        assert any(r.get("state") == 3 for r in results)
+
+    def test_none_fields_dont_crash(self):
+        section = {k: None for k in self.SAMPLE}
+        section["error"] = None
+        results = list(check_sep_sesam_server_info(section))
+        assert len(results) > 0
