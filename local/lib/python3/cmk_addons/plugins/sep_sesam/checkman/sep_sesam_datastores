@@ -1,0 +1,26 @@
+title: SEP Sesam Datastore Status and Usage
+agents: sep_sesam
+catalog: app/backup
+license: GPLv2
+distribution: check_mk
+description:
+ This check monitors SEP Sesam datastores via the SEP Sesam REST API.
+
+ For each datastore the check reports:
+ - Operational status (OK / Warning / Critical based on SEP Sesam status codes)
+ - Used space as a percentage of total capacity
+ - Free, used and total space (shown in service details and graphs)
+
+ Status code mapping: 0 → OK, 1 → WARN, 8 → CRIT.
+
+ Warning and critical thresholds for used space (in percent) can be
+ configured via the "SEP Sesam Datastore Usage" rule.
+
+ Requires the SEP Sesam special agent to be configured for the host.
+
+item:
+ The name of the datastore as configured in SEP Sesam.
+
+discovery:
+ One service is created per datastore. Datastores can be specified explicitly
+ in the special agent rule or auto-discovered from the API list endpoint.

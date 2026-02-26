@@ -1,0 +1,11 @@
+title: SEP Sesam Server
+agents: sep_sesam
+catalog: app/backup
+license: GPL
+distribution: check_mk
+description:
+ Provides informational data about the SEP Sesam server.
+
+ Reports server release version, operating system, database type,
+ Java version, and timezone. The check is always OK as long as
+ the API is reachable.

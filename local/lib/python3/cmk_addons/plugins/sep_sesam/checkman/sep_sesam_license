@@ -1,0 +1,21 @@
+title: SEP Sesam License Expiry
+agents: sep_sesam
+catalog: app/backup
+license: GPLv2
+distribution: check_mk
+description:
+ This check monitors the SEP Sesam maintenance license expiration date via
+ the SEP Sesam REST API.
+
+ The number of remaining days is compared against configurable thresholds:
+ - OK:       More days remaining than the warning threshold
+ - WARNING:  Days remaining within the warning threshold (default: 30 days)
+ - CRITICAL: Days remaining within the critical threshold (default: 15 days)
+ - CRITICAL: License already expired
+
+ Thresholds can be adjusted via the "SEP Sesam License Expiry" rule.
+
+ Requires the SEP Sesam special agent to be configured for the host.
+
+discovery:
+ One service is created per SEP Sesam host.

@@ -1,0 +1,21 @@
+title: SEP Sesam Backup Group Status
+agents: sep_sesam
+catalog: app/backup
+license: GPLv2
+distribution: check_mk
+description:
+ This check monitors the status of SEP Sesam backup groups via the SEP Sesam
+ REST API.
+
+ The check maps the SEP Sesam result status to CheckMK states:
+ SUCCESSFUL → OK, WARNING → WARN, ERROR → CRIT, CANCELLED → CRIT.
+ Any other status results in UNKNOWN.
+
+ Requires the SEP Sesam special agent to be configured for the host.
+
+item:
+ The name of the backup group as configured in SEP Sesam.
+
+discovery:
+ One service is created per backup group. Groups can be specified explicitly
+ in the special agent rule or auto-discovered from the API list endpoint.

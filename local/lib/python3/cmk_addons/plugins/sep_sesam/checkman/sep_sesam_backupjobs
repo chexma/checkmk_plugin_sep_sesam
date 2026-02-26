@@ -1,0 +1,14 @@
+title: SEP Sesam Backup Job
+agents: sep_sesam
+catalog: app/backup
+license: GPL
+distribution: check_mk
+description:
+ Monitors the status of individual SEP Sesam backup tasks.
+
+ Each backup task within a backup group is discovered as a separate
+ service. The check reports OK if the last run was SUCCESSFUL,
+ WARNING for WARNING status, and CRITICAL for ERROR or CANCELLED.
+
+item:
+ The name of the backup task.
