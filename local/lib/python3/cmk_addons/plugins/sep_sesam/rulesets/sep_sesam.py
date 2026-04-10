@@ -16,11 +16,11 @@ from cmk.rulesets.v1.form_specs import (
     Integer,
     LevelDirection,
     List,
-    NumberInRange,
     Password,
     SimpleLevels,
     String,
     migrate_to_password,
+    validators,
 )
 from cmk.rulesets.v1.rule_specs import (
     CheckParameters,
@@ -52,7 +52,7 @@ def _special_agent_formspec():
                         "TCP port of the SEP Sesam REST API. Default: 11401."
                     ),
                     prefill=DefaultValue(11401),
-                    custom_validate=[NumberInRange(min_value=1, max_value=65535)],
+                    custom_validate=(validators.NetworkPort(),),
                 ),
             ),
             "username": DictElement(
@@ -90,7 +90,7 @@ def _special_agent_formspec():
                         "Maximum time in seconds to wait for an API response."
                     ),
                     prefill=DefaultValue(30),
-                    custom_validate=[NumberInRange(min_value=1, max_value=300)],
+                    custom_validate=(validators.NumberInRange(min_value=1, max_value=300),),
                 ),
             ),
             "backupgroups": DictElement(
@@ -184,7 +184,7 @@ def _license_parameter_form():
                         "many days."
                     ),
                     prefill=DefaultValue(30),
-                    custom_validate=[NumberInRange(min_value=1)],
+                    custom_validate=(validators.NumberInRange(min_value=1),),
                 ),
             ),
             "crit_days": DictElement(
@@ -196,7 +196,7 @@ def _license_parameter_form():
                         "many days."
                     ),
                     prefill=DefaultValue(15),
-                    custom_validate=[NumberInRange(min_value=0)],
+                    custom_validate=(validators.NumberInRange(min_value=0),),
                 ),
             ),
         },
