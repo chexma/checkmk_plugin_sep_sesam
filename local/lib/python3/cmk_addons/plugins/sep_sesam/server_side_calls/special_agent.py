@@ -2,7 +2,7 @@
 """SEP Sesam Special Agent - Server Side Calls Configuration.
 
 Maps GUI ruleset parameters to CLI arguments for the agent_sep_sesam executable.
-The password is passed via stdin for security (not visible in process table).
+The password is passed as a Secret via --password (CheckMK resolves it at runtime).
 """
 
 from cmk.server_side_calls.v1 import (
@@ -39,13 +39,10 @@ def _agent_arguments(params, host_config):
         args.append("--datastores")
         args.extend(datastores)
 
-    # Pass password via stdin – keeps it out of the process table
-    password = params["password"].unsafe() if "password" in params else ""
+    if "password" in params:
+        args.extend(["--password", params["password"].unsafe()])
 
-    yield SpecialAgentCommand(
-        command_arguments=args,
-        stdin=password,
-    )
+    yield SpecialAgentCommand(command_arguments=args)
 
 
 special_agent_sep_sesam = SpecialAgentConfig(

@@ -344,12 +344,16 @@ def main():
         "--datastores", nargs="*", default=[], metavar="NAME",
         help="Datastore names to monitor (default: auto-discover all)",
     )
+    parser.add_argument(
+        "--password",
+        help="SEP Sesam API password (if not provided, read from stdin)",
+    )
     args = parser.parse_args()
 
-    # Read password from stdin (more secure than command line argument)
-    password = sys.stdin.read().strip()
+    # Password from argument or stdin
+    password = args.password or sys.stdin.read().strip()
     if not password:
-        sys.stderr.write("Error: No password provided via stdin\n")
+        sys.stderr.write("Error: No password provided via --password or stdin\n")
         sys.exit(1)
 
     client = SesamClient(
