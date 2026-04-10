@@ -111,10 +111,10 @@ def fetch_backupgroups(client, groups):
 
 
 def fetch_backupjobs(client, groups):
-    """Fetch all backup tasks via /backups/findTasks, filtered by groups."""
+    """Fetch all backup tasks via POST /backups/findTasks, filtered by groups."""
     results = []
     try:
-        resp = client.get("/backups/findTasks")
+        resp = client.post("/backups/findTasks", {})
         if resp.status_code == 200:
             tasks = resp.json()
             if isinstance(tasks, list):
