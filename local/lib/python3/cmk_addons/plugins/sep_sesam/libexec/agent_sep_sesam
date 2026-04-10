@@ -36,7 +36,10 @@ class SesamClient:
         self.verify_ssl = verify_ssl
         self.timeout = timeout
         self.session = requests.Session()
-        self.session.headers.update({"Accept": "application/json"})
+        self.session.headers.update({
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+        })
         if not verify_ssl and _URLLIB3_AVAILABLE:
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         self._login(username, password)
@@ -44,13 +47,19 @@ class SesamClient:
     def _login(self, username, password):
         """Authenticate via session-based login and store session header."""
         url = f"{self.base_url}/auth/login"
+        login_data = {"username": username, "secret": password, "type": "DEFAULT"}
         resp = self.session.post(
-            url,
-            json={"username": username, "secret": password, "type": "DEFAULT"},
-            verify=self.verify_ssl,
-            timeout=self.timeout,
+            url, json=login_data, verify=self.verify_ssl, timeout=self.timeout,
         )
-        resp.raise_for_status()
+        if resp.status_code != 200:
+            detail = ""
+            try:
+                detail = resp.text[:200]
+            except Exception:
+                pass
+            raise RuntimeError(
+                f"Login failed (HTTP {resp.status_code}): {detail}"
+            )
         session_id = resp.json().get("sessionId", "")
         if not session_id:
             raise RuntimeError("Login failed: no sessionId in response")
@@ -360,14 +369,18 @@ def main():
         sys.stderr.write("Error: No password provided via --password or stdin\n")
         sys.exit(1)
 
-    client = SesamClient(
-        hostname=args.hostname,
-        port=args.port,
-        username=args.username,
-        password=password,
-        verify_ssl=not args.no_verify_ssl,
-        timeout=args.timeout,
-    )
+    try:
+        client = SesamClient(
+            hostname=args.hostname,
+            port=args.port,
+            username=args.username,
+            password=password,
+            verify_ssl=not args.no_verify_ssl,
+            timeout=args.timeout,
+        )
+    except Exception as exc:
+        sys.stderr.write(f"Error: {exc}\n")
+        sys.exit(1)
 
     # Resolve group list (auto-discover if none specified)
     group_names = args.backupgroups or _discover_group_names(client)
