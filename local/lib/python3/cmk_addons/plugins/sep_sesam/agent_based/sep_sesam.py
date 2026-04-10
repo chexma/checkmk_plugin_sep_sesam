@@ -362,7 +362,7 @@ def check_sep_sesam_license(params, section):
             yield Metric("sep_sesam_volume_used_pct", vol_pct)
 
     if details_parts:
-        yield Result(state=State.OK, details=" | ".join(details_parts))
+        yield Result(state=State.OK, notice=" | ".join(details_parts))
 
 
 agent_section_sep_sesam_license = AgentSection(
@@ -424,7 +424,7 @@ def check_sep_sesam_server_info(section):
     if timezone:
         details_parts.append(f"Timezone: {timezone}")
     if details_parts:
-        yield Result(state=State.OK, details=" | ".join(details_parts))
+        yield Result(state=State.OK, notice=" | ".join(details_parts))
 
 
 agent_section_sep_sesam_server_info = AgentSection(
