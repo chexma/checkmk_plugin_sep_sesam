@@ -8,7 +8,7 @@ Queries the SEP Sesam REST API and outputs agent sections for:
 - License (expiration, edition, customer, volume)
 - Server info (version, OS, database type)
 
-Password is read from stdin for security.
+Authentication via session-based login (POST /auth/login).
 """
 
 import argparse
@@ -36,10 +36,25 @@ class SesamClient:
         self.verify_ssl = verify_ssl
         self.timeout = timeout
         self.session = requests.Session()
-        self.session.auth = (username, password)
         self.session.headers.update({"Accept": "application/json"})
         if not verify_ssl and _URLLIB3_AVAILABLE:
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+        self._login(username, password)
+
+    def _login(self, username, password):
+        """Authenticate via session-based login and store session header."""
+        url = f"{self.base_url}/auth/login"
+        resp = self.session.post(
+            url,
+            json={"username": username, "secret": password, "type": "CLASSIC"},
+            verify=self.verify_ssl,
+            timeout=self.timeout,
+        )
+        resp.raise_for_status()
+        session_id = resp.json().get("sessionId", "")
+        if not session_id:
+            raise RuntimeError("Login failed: no sessionId in response")
+        self.session.headers.update({"X-SEP-Session": session_id})
 
     def get(self, endpoint):
         url = f"{self.base_url}{endpoint}"
@@ -96,39 +111,43 @@ def fetch_backupgroups(client, groups):
 
 
 def fetch_backupjobs(client, groups):
-    """Fetch all backup tasks from the given backup groups."""
+    """Fetch all backup tasks via /backups/findTasks, filtered by groups."""
     results = []
-    for group in groups:
-        try:
-            resp = client.get(f"/backupgroups/{group}/tasks")
-            if resp.status_code == 200:
-                tasks = resp.json()
-                if isinstance(tasks, list):
-                    for task in tasks:
-                        if isinstance(task, dict) and task.get("name"):
-                            results.append({
-                                "name": task["name"],
-                                "group": group,
-                                "resultsSts": task.get("resultsSts", "UNKNOWN"),
-                                "exec": task.get("exec", True),
-                                "error": None,
-                            })
-            else:
-                results.append({
-                    "name": f"_error_{group}",
-                    "group": group,
-                    "resultsSts": "ERROR",
-                    "exec": False,
-                    "error": f"HTTP {resp.status_code}",
-                })
-        except Exception as exc:
+    try:
+        resp = client.get("/backups/findTasks")
+        if resp.status_code == 200:
+            tasks = resp.json()
+            if isinstance(tasks, list):
+                group_set = set(groups) if groups else None
+                for task in tasks:
+                    if not isinstance(task, dict) or not task.get("name"):
+                        continue
+                    task_group = task.get("groupName", "")
+                    if group_set and task_group not in group_set:
+                        continue
+                    results.append({
+                        "name": task["name"],
+                        "group": task_group,
+                        "resultsSts": task.get("resultsSts", "UNKNOWN"),
+                        "exec": task.get("exec", True),
+                        "error": None,
+                    })
+        else:
             results.append({
-                "name": f"_error_{group}",
-                "group": group,
+                "name": "_error_findTasks",
+                "group": "",
                 "resultsSts": "ERROR",
                 "exec": False,
-                "error": str(exc),
+                "error": f"HTTP {resp.status_code}",
             })
+    except Exception as exc:
+        results.append({
+            "name": "_error_findTasks",
+            "group": "",
+            "resultsSts": "ERROR",
+            "exec": False,
+            "error": str(exc),
+        })
     return results
 
 
