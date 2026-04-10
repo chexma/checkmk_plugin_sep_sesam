@@ -29,6 +29,35 @@ from cmk.agent_based.v2 import (
 # Utility
 # ---------------------------------------------------------------------------
 
+# SEP Sesam status codes → CheckMK states
+_SESAM_STATE_MAP = {
+    # Long form
+    "SUCCESSFUL": State.OK,
+    "WARNING": State.WARN,
+    "INFO": State.WARN,
+    "ERROR": State.CRIT,
+    "CANCELLED": State.CRIT,
+    # Numeric
+    "0": State.OK,
+    "1": State.WARN,
+    "2": State.CRIT,
+    "3": State.CRIT,
+    # Single-char codes
+    "I": State.WARN,
+    "X": State.CRIT,
+    "x": State.CRIT,
+    "E": State.CRIT,
+    "e": State.CRIT,
+    "C": State.CRIT,
+    "c": State.CRIT,
+}
+
+
+def _map_sesam_state(status: str) -> State:
+    """Map SEP Sesam status code to CheckMK State."""
+    return _SESAM_STATE_MAP.get(status, State.UNKNOWN)
+
+
 def _parse_size_to_bytes(size_str: Any) -> Optional[int]:
     """Convert a size string like '100GB' or '1.5TB' into bytes.
 
@@ -105,13 +134,7 @@ def check_sep_sesam_backupgroups(item, section):
         return
 
     status = group_data.get("resultsSts", "UNKNOWN")
-    state_map = {
-        "SUCCESSFUL": State.OK,
-        "WARNING": State.WARN,
-        "ERROR": State.CRIT,
-        "CANCELLED": State.CRIT,
-    }
-    state = state_map.get(status, State.UNKNOWN)
+    state = _map_sesam_state(status)
     yield Result(state=state, summary=f"Status: {status}")
 
 
@@ -166,13 +189,7 @@ def check_sep_sesam_backupjobs(item, section):
 
     status = task_data.get("resultsSts", "UNKNOWN")
     group = task_data.get("group", "")
-    state_map = {
-        "SUCCESSFUL": State.OK,
-        "WARNING": State.WARN,
-        "ERROR": State.CRIT,
-        "CANCELLED": State.CRIT,
-    }
-    state = state_map.get(status, State.UNKNOWN)
+    state = _map_sesam_state(status)
     group_info = f" (Group: {group})" if group else ""
     yield Result(state=state, summary=f"Status: {status}{group_info}")
 

@@ -46,7 +46,7 @@ class SesamClient:
         url = f"{self.base_url}/auth/login"
         resp = self.session.post(
             url,
-            json={"username": username, "secret": password, "type": "CLASSIC"},
+            json={"username": username, "secret": password, "type": "DEFAULT"},
             verify=self.verify_ssl,
             timeout=self.timeout,
         )
@@ -68,45 +68,36 @@ class SesamClient:
 
 
 def fetch_backupgroups(client, groups):
-    """Fetch backup group data. If groups is empty, tries list endpoint first."""
+    """Fetch backup group data via POST /backupgroups/find."""
     results = []
-
-    if not groups:
-        try:
-            resp = client.get("/backupgroups")
-            if resp.status_code == 200:
-                data = resp.json()
-                if isinstance(data, list):
-                    groups = [g.get("name") for g in data if g.get("name")]
-                elif isinstance(data, dict):
-                    items = data.get("backupGroups") or data.get("items") or []
-                    groups = [g.get("name") for g in items if g.get("name")]
-        except Exception:
-            pass
-
-    for group in groups:
-        try:
-            resp = client.get(f"/backupgroups/{group}")
-            if resp.status_code == 200:
-                data = resp.json()
-                results.append({
-                    "name": group,
-                    "resultsSts": data.get("resultsSts", "UNKNOWN"),
-                    "error": None,
-                })
-            else:
-                results.append({
-                    "name": group,
-                    "resultsSts": "ERROR",
-                    "error": f"HTTP {resp.status_code}",
-                })
-        except requests.RequestException as exc:
+    try:
+        resp = client.post("/backupgroups/find", {})
+        if resp.status_code == 200:
+            all_groups = resp.json()
+            if isinstance(all_groups, list):
+                group_set = set(groups) if groups else None
+                for g in all_groups:
+                    if not isinstance(g, dict) or not g.get("name"):
+                        continue
+                    if group_set and g["name"] not in group_set:
+                        continue
+                    results.append({
+                        "name": g["name"],
+                        "resultsSts": g.get("resultsSts", "UNKNOWN"),
+                        "error": None,
+                    })
+        else:
             results.append({
-                "name": group,
+                "name": "_error",
                 "resultsSts": "ERROR",
-                "error": str(exc),
+                "error": f"HTTP {resp.status_code}",
             })
-
+    except requests.RequestException as exc:
+        results.append({
+            "name": "_error",
+            "resultsSts": "ERROR",
+            "error": str(exc),
+        })
     return results
 
 
@@ -152,19 +143,16 @@ def fetch_backupjobs(client, groups):
 
 
 def fetch_datastores(client, datastores):
-    """Fetch datastore data. If datastores is empty, tries list endpoint first."""
+    """Fetch datastore data. If datastores is empty, discovers all via POST /datastores/find."""
     results = []
 
     if not datastores:
         try:
-            resp = client.get("/datastores")
+            resp = client.post("/datastores/find", {})
             if resp.status_code == 200:
                 data = resp.json()
                 if isinstance(data, list):
                     datastores = [d.get("name") for d in data if d.get("name")]
-                elif isinstance(data, dict):
-                    items = data.get("datastores") or data.get("items") or []
-                    datastores = [d.get("name") for d in items if d.get("name")]
         except Exception:
             pass
 
@@ -318,14 +306,11 @@ def fetch_server_info(client):
 def _discover_group_names(client):
     """Return list of all backup group names from the API."""
     try:
-        resp = client.get("/backupgroups")
+        resp = client.post("/backupgroups/find", {})
         if resp.status_code == 200:
             data = resp.json()
             if isinstance(data, list):
                 return [g.get("name") for g in data if g.get("name")]
-            if isinstance(data, dict):
-                items = data.get("backupGroups") or data.get("items") or []
-                return [g.get("name") for g in items if g.get("name")]
     except Exception:
         pass
     return []
